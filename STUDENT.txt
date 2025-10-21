@@ -1,2 +1,22 @@
-APP_URL=<url_aplikasi>
-MAP_SERVICE_API_KEY=<api_key>
+Instruksi STUDENT.txt (Wajib jika menggunakan API key/token):
+
+1) Jika Story API membutuhkan autentikasi:
+   - Tuliskan Base URL dan Token yang Anda gunakan di bawah ini.
+   - Nilai pada file ini digunakan oleh reviewer sebagai referensi.
+   - Aplikasi TIDAK membaca file ini saat runtime. Aplikasi membaca konfigurasi dari localStorage (disetel melalui halaman "Tentang").
+
+2) Contoh format pengisian:
+   BASE_URL=https://story-api.dicoding.dev/v1
+   TOKEN=Bearer <ISI_TOKEN_ANDA_DI_SINI>
+
+3) Cara menyetel konfigurasi di aplikasi:
+   - Jalankan aplikasi lalu buka menu "Tentang".
+   - Isi Base URL dan Token sesuai nilai di atas.
+   - Klik "Simpan Pengaturan".
+
+4) Peta:
+   - Aplikasi menggunakan Leaflet + OpenStreetMap, tidak memerlukan API key.
+   - Multiple tile layers diaktifkan melalui kontrol layer pada halaman "Peta".
+
+5) Catatan:
+   - Jangan commit token sensitif jika bersifat rahasia. Namun, untuk keperluan penilaian submission, isi TOKEN di atas agar reviewer dapat melakukan uji fungsional dengan mudah.
