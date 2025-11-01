@@ -26,11 +26,9 @@ export default class App {
     this._navigationDrawer = navigationDrawer;
     this._currentView = null;
 
-    // Drawer accessibility & keyboard handling
     if (this._drawerButton && this._navigationDrawer) {
       this._onDrawerBtnClick = () => this._toggleDrawer();
       this._onKeydownGlobal = (e) => {
-        // ESC untuk menutup
         if (e.key === 'Escape' && this._navigationDrawer.classList.contains('open')) {
           this._closeDrawer({ returnFocus: true });
         }
@@ -38,7 +36,6 @@ export default class App {
       this._onNavClick = (e) => {
         const target = e.target;
         if (target && target.matches('a[href^="#/"]')) {
-          // Tutup drawer saat link dipilih (penting di mobile dan keyboard)
           this._closeDrawer({ returnFocus: false });
         }
       };
@@ -60,7 +57,6 @@ export default class App {
     this._setActiveNav(route.navKey || routeKey);
 
     const render = async () => {
-      // Bersihkan view sebelumnya (tutup kamera, dll.)
       if (this._currentView && typeof this._currentView.destroy === 'function') {
         try { await this._currentView.destroy(); } catch {}
       }
@@ -70,7 +66,6 @@ export default class App {
       await view.afterRender(params, presenter);
       this._currentView = view;
 
-      // Focus management: fokuskan judul halaman
       const pageTitle = this._content.querySelector('[data-page-title]');
       if (pageTitle) {
         pageTitle.setAttribute('tabindex', '-1');
@@ -99,11 +94,9 @@ export default class App {
     this._drawerButton.setAttribute('aria-label', isOpen ? 'Tutup menu' : 'Buka menu');
 
     if (isOpen) {
-      // Pindahkan fokus ke link pertama di nav
       const firstLink = this._navigationDrawer.querySelector('a[href^="#/"]');
       firstLink?.focus();
     } else {
-      // Kembalikan fokus ke tombol
       this._drawerButton.focus();
     }
   }

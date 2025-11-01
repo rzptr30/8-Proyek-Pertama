@@ -1,3 +1,6 @@
+// Simple hash router parser used by src/scripts/pages/app.js
+// Simpan file ini persis di: src/scripts/router/hash-router.js
+
 const normalizePath = (path) => {
   if (!path) return '/';
   if (path === '') return '/';
@@ -6,18 +9,19 @@ const normalizePath = (path) => {
 
 const Router = {
   parse() {
+    // Ambil hash tanpa '#'
     // Contoh hash: "#/detail/abc123?foo=bar"
     const raw = window.location.hash.slice(1) || '/';
-    const [rawPath, rawQuery] = raw.split('?');
+    const [rawPath] = raw.split('?');
     const path = normalizePath(rawPath);
 
-    // Dynamic route: /detail/:id
+    // Route dinamis: /detail/:id
     if (path.startsWith('/detail/')) {
       const id = path.replace('/detail/', '');
       return { path: '/detail/:id', params: { id } };
     }
 
-    // Statis
+    // Route statis yang didukung aplikasi
     switch (path) {
       case '/':
       case '/about':
@@ -25,6 +29,7 @@ const Router = {
       case '/add':
         return { path, params: {} };
       default:
+        // fallback ke beranda jika route tidak dikenal
         return { path: '/', params: {} };
     }
   },

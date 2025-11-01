@@ -1,3 +1,6 @@
+// Konfigurasi API: base URL & token disimpan di localStorage.
+// Catatan: setApiToken akan membersihkan awalan "Bearer " jika user menempelkannya.
+
 export const DEFAULT_API_BASE_URL = 'https://story-api.dicoding.dev/v1';
 
 export function getApiBaseUrl() {
@@ -14,11 +17,14 @@ export function setApiBaseUrl(url) {
 }
 
 export function getApiToken() {
-  return localStorage.getItem('api_token') || '';
+  // Simpan token murni tanpa kata "Bearer"
+  const t = localStorage.getItem('api_token') || '';
+  return (t || '').trim().replace(/^Bearer\s+/i, '');
 }
 
 export function setApiToken(token) {
-  const val = (token || '').trim();
+  // Bersihkan jika user menempel "Bearer <token>"
+  const val = (token || '').trim().replace(/^Bearer\s+/i, '');
   if (!val) {
     localStorage.removeItem('api_token');
   } else {
@@ -27,8 +33,7 @@ export function setApiToken(token) {
 }
 
 /**
- * Catatan:
- * - Runtime aplikasi membaca Base URL dan Token dari localStorage.
- * - Sesuai ketentuan submission, cantumkan API key/token di STUDENT.txt untuk reviewer.
- * - STUDENT.txt tidak bisa dibaca oleh aplikasi saat runtime; ini hanya media dokumentasi.
+ * Penting:
+ * - Aplikasi runtime menggunakan localStorage untuk membaca Base URL & token.
+ * - Untuk reviewer, cantumkan nilai token (dengan awalan "Bearer ") di STUDENT.txt.
  */
