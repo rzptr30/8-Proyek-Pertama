@@ -1,7 +1,8 @@
 import Router from '../router/hash-router';
 import { getApiToken, clearAuth, getAuthUser } from '../data/config';
+import { withViewTransition } from '../utils/view-transition';
 
-// IMPORT views & presenters sesuai struktur kamu
+// Views
 import HomeView from '../views/HomeView';
 import LoginView from '../views/LoginView';
 import RegisterView from '../views/RegisterView';
@@ -10,6 +11,7 @@ import MapView from '../views/MapView';
 import AddView from '../views/AddView';
 import DetailView from '../views/DetailView';
 
+// Presenters
 import HomePresenter from '../presenters/HomePresenter';
 import LoginPresenter from '../presenters/LoginPresenter';
 import RegisterPresenter from '../presenters/RegisterPresenter';
@@ -45,29 +47,36 @@ export default class App {
     }
 
     if (drawerButton && navigationDrawer) {
-      drawerButton.addEventListener('click', () => this._toggleDrawer());
-      navigationDrawer.addEventListener('click', (e) => {
-        if (e.target.matches('a[href^="#/"]')) this._closeDrawer({ returnFocus: false });
-      });
-      document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape' && navigationDrawer.classList.contains('open')) {
-          this._closeDrawer();
+      this._drawerButton.addEventListener('click', () => this._toggleDrawer());
+      this._navigationDrawer.addEventListener('click', (e) => {
+        if (e.target.matches('a[href^="#/"]')) {
+          this._closeDrawer({ returnFocus: false });
         }
       });
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && this._navigationDrawer.classList.contains('open')) {
+          this._closeDrawer({ returnFocus: true });
+        }
+      });
+      // Initial ARIA
+      this._drawerButton.setAttribute('aria-expanded', 'false');
+      this._drawerButton.setAttribute('aria-label', 'Buka menu');
     }
   }
 
   async renderPage() {
     const { path, params } = Router.parse();
     const route = ROUTES[path] || ROUTES['/'];
-
     const authenticated = !!getApiToken();
 
-    // Guard
+    // Guard: butuh auth tapi belum login -> redirect login
     if (route.requiresAuth && !authenticated) {
-      window.location.hash = '#/login';
+      if (path !== '/login') {
+        window.location.hash = '#/login';
+      }
       return;
     }
+    // Sudah login buka /login atau /register -> alihkan ke beranda
     if (!route.requiresAuth && (path === '/login' || path === '/register') && authenticated) {
       window.location.hash = '#/';
       return;
@@ -76,38 +85,78 @@ export default class App {
     const view = new route.view();
     const presenter = new route.presenter(view);
 
-    const html = await view.render(params);
-    this._content.innerHTML = html;
-    await view.afterRender(params, presenter);
-    this._currentView = view;
+    const doRender = async () => {
+      if (this._currentView?.destroy) {
+        try { await this._currentView.destroy(); } catch {}
+      }
+      const html = await view.render(params);
+      this._content.innerHTML = html;
+      await view.afterRender(params, presenter);
+      this._currentView = view;
 
-    this._updateAuthNav();
-    this._setActiveNav(route.navKey);
+      this._updateAuthNav();
+      this._setActiveNav(route.navKey);
+      this._focusPageTitle();
+    };
+
+    await withViewTransition(doRender);
+  }
+
+  _focusPageTitle() {
     const title = this._content.querySelector('[data-page-title]');
     if (title) {
       title.setAttribute('tabindex', '-1');
-      title.focus();
+      title.focus({ preventScroll: true });
+    } else {
+      this._content.setAttribute('tabindex', '-1');
+      this._content.focus({ preventScroll: true });
     }
   }
 
   _updateAuthNav() {
     const token = getApiToken();
     const nav = document.getElementById('nav-list');
-    const loginLink = nav?.querySelector('a[href="#/login"]');
-    const regLink = nav?.querySelector('a[href="#/register"]');
     const logoutBtn = document.getElementById('logout-button');
     const userStatus = document.getElementById('user-status');
+
+    // Cari semua elemen link login/register (termasuk parent <li> kalau ada)
+    const loginLinks = [
+      ...document.querySelectorAll('a[href="#/login"], [data-nav="login"]'),
+    ];
+    const registerLinks = [
+      ...document.querySelectorAll('a[href="#/register"], [data-nav="register"]'),
+    ];
+
+    const hide = (el) => {
+      if (!el) return;
+      el.setAttribute('hidden', 'true');
+      el.setAttribute('aria-hidden', 'true');
+      // Sembunyikan parent <li> jika ada
+      if (el.parentElement && el.parentElement.tagName === 'LI') {
+        el.parentElement.setAttribute('hidden', 'true');
+        el.parentElement.setAttribute('aria-hidden', 'true');
+      }
+    };
+    const show = (el) => {
+      if (!el) return;
+      el.removeAttribute('hidden');
+      el.removeAttribute('aria-hidden');
+      if (el.parentElement && el.parentElement.tagName === 'LI') {
+        el.parentElement.removeAttribute('hidden');
+        el.parentElement.removeAttribute('aria-hidden');
+      }
+    };
 
     if (token) {
       const { name } = getAuthUser();
       if (userStatus) userStatus.textContent = `Masuk sebagai ${(name || '').trim() || 'Pengguna'}`;
-      loginLink?.setAttribute('hidden', 'true');
-      regLink?.setAttribute('hidden', 'true');
+      loginLinks.forEach(hide);
+      registerLinks.forEach(hide);
       if (logoutBtn) logoutBtn.hidden = false;
     } else {
       if (userStatus) userStatus.textContent = 'Belum masuk';
-      loginLink?.removeAttribute('hidden');
-      regLink?.removeAttribute('hidden');
+      loginLinks.forEach(show);
+      registerLinks.forEach(show);
       if (logoutBtn) logoutBtn.hidden = true;
     }
   }
@@ -130,8 +179,15 @@ export default class App {
   _toggleDrawer() {
     const nav = this._navigationDrawer;
     if (!nav) return;
-    const open = nav.classList.toggle('open');
-    this._drawerButton?.setAttribute('aria-expanded', String(open));
+    const opened = nav.classList.toggle('open');
+    this._drawerButton?.setAttribute('aria-expanded', String(opened));
+    this._drawerButton?.setAttribute('aria-label', opened ? 'Tutup menu' : 'Buka menu');
+    if (opened) {
+      const firstLink = nav.querySelector('a[href^="#/"]');
+      firstLink?.focus();
+    } else {
+      this._drawerButton?.focus();
+    }
   }
 
   _closeDrawer({ returnFocus = true } = {}) {
@@ -139,6 +195,7 @@ export default class App {
     if (!nav || !nav.classList.contains('open')) return;
     nav.classList.remove('open');
     this._drawerButton?.setAttribute('aria-expanded', 'false');
+    this._drawerButton?.setAttribute('aria-label', 'Buka menu');
     if (returnFocus) this._drawerButton?.focus();
   }
 }

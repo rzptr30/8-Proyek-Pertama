@@ -4,7 +4,6 @@ import apiClient from '../data/api-client';
 export default class MapPresenter {
   constructor(view) {
     this._view = view;
-
     this._map = null;
     this._baseLayers = {};
     this._markersLayer = null;
@@ -15,26 +14,22 @@ export default class MapPresenter {
   initMap(mapEl) {
     if (!mapEl) return;
 
-    // Inisialisasi peta
     this._map = L.map(mapEl, {
       center: [-2.5, 118],
       zoom: 5,
       scrollWheelZoom: true,
     });
 
-    // Multiple tile layers (Advance)
     const osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       maxZoom: 19,
-      attribution:
-        '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
     }).addTo(this._map);
 
     const cartoLight = L.tileLayer(
       'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
       {
         maxZoom: 20,
-        attribution:
-          '&copy; <a href="https://carto.com/">CARTO</a> | © OpenStreetMap contributors',
+        attribution: '&copy; <a href="https://carto.com/">CARTO</a> | © OpenStreetMap contributors',
       },
     );
 
@@ -53,10 +48,7 @@ export default class MapPresenter {
       'Esri World Imagery': esriWorldImagery,
     };
 
-    // Control layer (Advance)
     L.control.layers(this._baseLayers, null, { position: 'topright' }).addTo(this._map);
-
-    // Layer untuk marker
     this._markersLayer = L.layerGroup().addTo(this._map);
   }
 
@@ -64,17 +56,17 @@ export default class MapPresenter {
     try {
       if (statusEl) statusEl.textContent = 'Memuat lokasi cerita...';
       const res = await apiClient.listStories({ page: 1, size: 50, location: 1 });
-      const list = Array.isArray(res?.listStory) ? res.listStory : res?.stories || [];
+      const stories = Array.isArray(res?.listStory) ? res.listStory : res?.stories || [];
 
-      const items = list
-        .map((it) => this._normalize(it))
-        .filter((it) => it.lat !== null && it.lon !== null);
+      const items = stories
+        .map((s) => this._normalize(s))
+        .filter((s) => s.lat !== null && s.lon !== null);
 
       this._renderMarkers(items);
       this._renderList(listEl, items);
+      this._fitBoundsToMarkers();
 
       if (statusEl) statusEl.textContent = `Menampilkan ${items.length} lokasi cerita.`;
-      this._fitBoundsToMarkers();
     } catch (err) {
       const msg = err?.message || 'Gagal memuat data peta.';
       if (statusEl) statusEl.textContent = msg;
@@ -82,7 +74,7 @@ export default class MapPresenter {
         listEl.innerHTML = `
           <div class="notice notice--error" role="alert">
             <p><strong>Gagal memuat peta:</strong> ${this._esc(msg)}</p>
-            <p>Pastikan Base URL dan Token sudah diatur pada halaman <a href="#/about">Tentang</a>.</p>
+            <p>Pastikan Anda sudah login sebelum membuka halaman Peta.</p>
           </div>
         `;
       }
@@ -99,7 +91,7 @@ export default class MapPresenter {
       const popupHtml = `
         <div class="popup">
           <div class="popup__media">
-            <img src="${this._esc(it.photoUrl)}" alt="Foto cerita ${this._esc(it.name)}" />
+            <img src="${this._esc(it.photoUrl)}" alt="Foto cerita ${this._esc(it.name)}">
           </div>
           <div class="popup__body">
             <strong>${this._esc(it.name)}</strong>
@@ -108,9 +100,7 @@ export default class MapPresenter {
         </div>
       `;
       marker.bindPopup(popupHtml, { maxWidth: 260 });
-
       marker.on('click', () => this._highlight(it.id, { from: 'marker' }));
-
       marker.addTo(this._markersLayer);
       this._markersById.set(it.id, { item: it, marker });
     });
@@ -122,23 +112,19 @@ export default class MapPresenter {
       listEl.innerHTML = `<p role="status">Tidak ada data berlokasi.</p>`;
       return;
     }
-
     const html = items
       .map(
         (it) => `
-      <li class="maplist__item" data-id="${this._esc(it.id)}" role="option" aria-selected="false">
-        <button type="button" class="maplist__btn" aria-label="Fokuskan peta ke ${this._esc(
-          it.name,
-        )}">
-          <span class="maplist__title">${this._esc(it.name)}</span>
-          <span class="maplist__desc">${this._esc(this._truncate(it.description, 80))}</span>
-        </button>
-      </li>`,
+        <li class="maplist__item" data-id="${this._esc(it.id)}" role="option" aria-selected="false">
+          <button type="button" class="maplist__btn" aria-label="Fokuskan peta ke ${this._esc(it.name)}">
+            <span class="maplist__title">${this._esc(it.name)}</span>
+            <span class="maplist__desc">${this._esc(this._truncate(it.description, 80))}</span>
+          </button>
+        </li>`,
       )
       .join('');
 
     listEl.innerHTML = `<ul class="maplist" aria-label="Daftar lokasi cerita">${html}</ul>`;
-
     listEl.querySelectorAll('.maplist__item').forEach((li) => {
       li.querySelector('.maplist__btn')?.addEventListener('click', () => {
         const id = li.getAttribute('data-id') || '';
@@ -149,8 +135,6 @@ export default class MapPresenter {
 
   _highlight(id, { from } = {}) {
     if (!id || !this._map) return;
-
-    // Update list UI
     const container = document.getElementById('map-list');
     container?.querySelectorAll('.maplist__item').forEach((li) => {
       const isActive = li.getAttribute('data-id') === id;
@@ -163,33 +147,26 @@ export default class MapPresenter {
       }
     });
 
-    // Update marker
-    const m = this._markersById.get(id);
-    if (!m) return;
+    const entry = this._markersById.get(id);
+    if (!entry) return;
 
     if (this._activeId && this._activeId !== id) {
       const prev = this._markersById.get(this._activeId);
       if (prev?.marker) prev.marker.setZIndexOffset(0);
     }
-    m.marker.setZIndexOffset(1000);
+    entry.marker.setZIndexOffset(1000);
     this._activeId = id;
 
-    // Peta fokus
-    this._map.setView([m.item.lat, m.item.lon], Math.max(this._map.getZoom(), 12), {
-      animate: true,
-    });
-    if (from === 'list') m.marker.openPopup();
+    this._map.setView([entry.item.lat, entry.item.lon], Math.max(this._map.getZoom(), 12), { animate: true });
+    if (from === 'list') entry.marker.openPopup();
 
-    // Scroll daftar agar item aktif terlihat
     const activeLi = container?.querySelector('.maplist__item.is-active');
-    if (activeLi) activeLi.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    activeLi?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   }
 
   _fitBoundsToMarkers() {
     const bounds = [];
-    this._markersById.forEach(({ item }) => {
-      bounds.push([item.lat, item.lon]);
-    });
+    this._markersById.forEach(({ item }) => bounds.push([item.lat, item.lon]));
     if (bounds.length && this._map) {
       this._map.fitBounds(bounds, { padding: [24, 24] });
     }
@@ -210,8 +187,7 @@ export default class MapPresenter {
 
   _truncate(text, max = 100) {
     if (!text) return '';
-    if (text.length <= max) return text;
-    return text.slice(0, max - 1) + '…';
+    return text.length <= max ? text : text.slice(0, max - 1) + '…';
   }
 
   _esc(s) {

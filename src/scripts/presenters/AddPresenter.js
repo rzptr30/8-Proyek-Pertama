@@ -5,25 +5,22 @@ import { captureToBlob, startCameraStream, stopCameraStream } from '../utils/cam
 export default class AddPresenter {
   constructor(view) {
     this._view = view;
-
     this._map = null;
     this._marker = null;
     this._picked = { lat: null, lon: null };
-
     this._stream = null;
     this._cameraBlob = null;
   }
 
   initMap(mapEl, onPick) {
     if (!mapEl) return;
-
     this._map = L.map(mapEl, {
       center: [-2.5, 118],
       zoom: 5,
       scrollWheelZoom: true,
     });
 
-    const osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       maxZoom: 19,
       attribution: '&copy; OpenStreetMap contributors',
     }).addTo(this._map);
@@ -57,12 +54,12 @@ export default class AddPresenter {
   }
 
   async startCamera(videoEl) {
-    if (this._stream) return; // sudah aktif
+    if (this._stream) return;
     this._stream = await startCameraStream(videoEl, { facingMode: 'environment' });
   }
 
   async capturePhoto(videoEl) {
-    if (!this._stream) throw new Error('Kamera belum aktif');
+    if (!this._stream) throw new Error('Kamera belum aktif.');
     const blob = await captureToBlob(videoEl);
     this._cameraBlob = blob;
     return blob;
@@ -90,9 +87,9 @@ export default class AddPresenter {
     }
     const photoCandidate = photoFile || this._cameraBlob;
     if (!photoCandidate) {
-      errors.push('Foto wajib diunggah atau diambil dari kamera.');
+      errors.push('Foto wajib diunggah atau diambil kamera.');
     }
-    if (lat === null || lat === undefined || lon === null || lon === undefined) {
+    if (lat == null || lon == null) {
       errors.push('Lokasi wajib dipilih di peta (klik untuk menentukan titik).');
     }
     if (errors.length) {
@@ -108,7 +105,6 @@ export default class AddPresenter {
       lon,
     });
 
-    // Berhasil: kosongkan foto kamera agar tidak terkirim ulang tanpa sengaja
     this.clearCameraPhoto();
     return res;
   }
