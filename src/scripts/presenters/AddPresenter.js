@@ -1,6 +1,7 @@
 import L from '../utils/leaflet-assets';
 import apiClient from '../data/api-client';
 import { captureToBlob, startCameraStream, stopCameraStream } from '../utils/camera';
+import { addOutboxStory } from '../data/saved-store';
 
 export default class AddPresenter {
   constructor(view) {
@@ -98,6 +99,19 @@ export default class AddPresenter {
       throw err;
     }
 
+    // Offline: antre ke Outbox
+    if (!navigator.onLine) {
+      const entry = await addOutboxStory({
+        description: description.trim(),
+        photoBlob: photoCandidate,
+        lat,
+        lon,
+      });
+      this.clearCameraPhoto();
+      return { offlineQueued: true, outbox: entry };
+    }
+
+    // Online: kirim langsung
     const res = await apiClient.addStory({
       description: description.trim(),
       photoFile: photoCandidate,
@@ -106,6 +120,6 @@ export default class AddPresenter {
     });
 
     this.clearCameraPhoto();
-    return res;
+    return { offlineQueued: false, result: res };
   }
 }
