@@ -1,0 +1,9 @@
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+# Hash routing tidak butuh redirect, tapi aman kalau suatu saat kamu migrasi
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
