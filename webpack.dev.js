@@ -18,6 +18,7 @@ module.exports = merge(common, {
   devServer: {
     static: path.resolve(__dirname, 'dist'),
     port: 9000,
+    open: true, // tambahkan ini agar auto-buka browser
     client: {
       overlay: {
         errors: true,

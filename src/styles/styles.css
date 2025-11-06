@@ -346,3 +346,55 @@ button:hover { background: color-mix(in srgb, CanvasText 12%, transparent); }
   .main-content { padding: 12px; }
   .card__media { height: 160px; }
 }
+
+/* Status pengguna di header */
+.user-status {
+  font-size: 0.9rem;
+  opacity: 0.85;
+  white-space: nowrap;
+}
+/* ===== Password toggle (posisi pas di dalam kotak input) ===== */
+.password-field {
+  /* container field biasa (label + input wrapper) */
+}
+
+.password-input-wrap {
+  position: relative;
+  display: inline-block;
+  width: 100%;
+}
+
+.password-input-wrap input[type="password"],
+.password-input-wrap input[type="text"] {
+  width: 100%;
+  box-sizing: border-box;
+  padding-right: 44px; /* ruang untuk tombol mata */
+}
+
+/* Tombol mata menempel di kanan, center secara vertikal */
+.password-toggle {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  min-width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  cursor: pointer;
+  font-size: 18px;
+  line-height: 1;
+  color: inherit;
+}
+
+.password-toggle:hover {
+  background: rgba(255,255,255,0.06);
+}
+
+.password-toggle:focus {
+  outline: 2px solid #66afe9;
+  outline-offset: 2px;
+}

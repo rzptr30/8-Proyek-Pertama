@@ -4,18 +4,26 @@ import AboutView from '../views/AboutView';
 import MapView from '../views/MapView';
 import AddView from '../views/AddView';
 import DetailView from '../views/DetailView';
+import LoginView from '../views/LoginView';
+import RegisterView from '../views/RegisterView';
 
 import HomePresenter from '../presenters/HomePresenter';
 import AboutPresenter from '../presenters/AboutPresenter';
 import MapPresenter from '../presenters/MapPresenter';
 import AddPresenter from '../presenters/AddPresenter';
 import DetailPresenter from '../presenters/DetailPresenter';
+import LoginPresenter from '../presenters/LoginPresenter';
+import RegisterPresenter from '../presenters/RegisterPresenter';
+
+import { getApiToken, clearAuth, getAuthUser } from '../data/config';
 
 const ROUTES = {
   '/': { view: HomeView, presenter: HomePresenter, navKey: '/' },
   '/about': { view: AboutView, presenter: AboutPresenter, navKey: '/about' },
   '/map': { view: MapView, presenter: MapPresenter, navKey: '/map' },
-  '/add': { view: AddView, presenter: AddPresenter, navKey: '/add' },
+  '/add': { view: AddView, presenter: AddPresenter, navKey: '/add', requiresAuth: true },
+  '/login': { view: LoginView, presenter: LoginPresenter, navKey: '/login' },
+  '/register': { view: RegisterView, presenter: RegisterPresenter, navKey: '/register' },
   '/detail/:id': { view: DetailView, presenter: DetailPresenter, navKey: '/' },
 };
 
@@ -44,12 +52,27 @@ export default class App {
       document.addEventListener('keydown', this._onKeydownGlobal);
       this._navigationDrawer.addEventListener('click', this._onNavClick);
     }
+
+    // Tombol Logout
+    const logoutBtn = document.getElementById('logout-button');
+    if (logoutBtn) {
+      logoutBtn.addEventListener('click', () => {
+        clearAuth();
+        this._updateAuthNav();
+        window.location.hash = '#/login';
+      });
+    }
   }
 
   async renderPage() {
     const { path, params } = Router.parse();
     const routeKey = ROUTES[path] ? path : '/';
     const route = ROUTES[routeKey];
+
+    if (route.requiresAuth && !getApiToken()) {
+      window.location.hash = '#/login';
+      return;
+    }
 
     const view = new route.view();
     const presenter = new route.presenter(view);
@@ -65,6 +88,9 @@ export default class App {
       this._content.innerHTML = html;
       await view.afterRender(params, presenter);
       this._currentView = view;
+
+      // Update status auth di navbar setiap render halaman
+      this._updateAuthNav();
 
       const pageTitle = this._content.querySelector('[data-page-title]');
       if (pageTitle) {
@@ -88,11 +114,37 @@ export default class App {
     }
   }
 
+  _updateAuthNav() {
+    const token = getApiToken();
+    const user = getAuthUser();
+
+    const nav = document.getElementById('nav-list');
+    const loginLink = nav?.querySelector('a[href="#/login"]');
+    const regLink = nav?.querySelector('a[href="#/register"]');
+    const logoutBtn = document.getElementById('logout-button');
+    const userStatus = document.getElementById('user-status');
+
+    if (token) {
+      // Tampilkan nama user
+      const name = (user?.name || '').trim() || 'Pengguna';
+      if (userStatus) userStatus.textContent = `Masuk sebagai ${name}`;
+
+      // Toggle nav
+      loginLink?.setAttribute('hidden', 'true');
+      regLink?.setAttribute('hidden', 'true');
+      if (logoutBtn) logoutBtn.hidden = false;
+    } else {
+      if (userStatus) userStatus.textContent = 'Belum masuk';
+      loginLink?.removeAttribute('hidden');
+      regLink?.removeAttribute('hidden');
+      if (logoutBtn) logoutBtn.hidden = true;
+    }
+  }
+
   _toggleDrawer() {
     const isOpen = this._navigationDrawer.classList.toggle('open');
     this._drawerButton.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
     this._drawerButton.setAttribute('aria-label', isOpen ? 'Tutup menu' : 'Buka menu');
-
     if (isOpen) {
       const firstLink = this._navigationDrawer.querySelector('a[href^="#/"]');
       firstLink?.focus();
