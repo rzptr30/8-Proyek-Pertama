@@ -1,36 +1,16 @@
-// Helper autentikasi ke Story API
-import { getApiBaseUrl } from './config';
-
-async function handleJson(res) {
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok || data?.error) {
-    const err = new Error(data?.message || `HTTP ${res.status}`);
-    err.status = res.status;
-    err.data = data;
-    throw err;
-  }
-  return data;
-}
+import apiClient from './api-client';
+import { setApiToken, setAuthUser } from './config';
 
 export async function register({ name, email, password }) {
-  const base = getApiBaseUrl();
-  const res = await fetch(`${base}/register`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ name, email, password }),
-  });
-  // Di Story API: pesan "User created" jika sukses, tidak ada token.
-  return handleJson(res);
+  await apiClient.register({ name, email, password }); // "User created"
+  return login({ email, password }); // auto-login
 }
 
 export async function login({ email, password }) {
-  const base = getApiBaseUrl();
-  const res = await fetch(`${base}/login`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email, password }),
-  });
-  const data = await handleJson(res);
-  // data.loginResult: { userId, name, token }
-  return data.loginResult || {};
+  const data = await apiClient.login({ email, password });
+  const lr = data?.loginResult || {};
+  if (!lr.token) throw new Error('Token tidak ditemukan pada respons login.');
+  setApiToken(lr.token);
+  setAuthUser({ userId: lr.userId || '', name: lr.name || '' });
+  return lr;
 }

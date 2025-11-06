@@ -1,8 +1,6 @@
 import { getApiBaseUrl, getApiToken } from './config';
 
 class ApiClient {
-  constructor() {}
-
   _buildUrl(path, query = {}) {
     const base = getApiBaseUrl().replace(/\/+$/, '');
     const p = path.startsWith('/') ? path : `/${path}`;
@@ -15,8 +13,9 @@ class ApiClient {
     return url.toString();
   }
 
-  _headers({ auth = true } = {}) {
+  _headers({ auth = true, json = true } = {}) {
     const headers = {};
+    if (json) headers['Content-Type'] = 'application/json';
     if (auth) {
       const token = getApiToken();
       if (token) headers['Authorization'] = `Bearer ${token}`;
@@ -32,7 +31,7 @@ class ApiClient {
     } catch {
       data = { message: text || 'Invalid JSON response' };
     }
-    if (!res.ok) {
+    if (!res.ok || data?.error) {
       const msg = data?.message || `HTTP ${res.status}`;
       const err = new Error(msg);
       err.status = res.status;
@@ -42,12 +41,34 @@ class ApiClient {
     return data;
   }
 
+  // ========== AUTH (tanpa token) ==========
+  async login({ email, password }) {
+    const url = this._buildUrl('/login');
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: this._headers({ auth: false, json: true }),
+      body: JSON.stringify({ email, password }),
+    });
+    return this._handleJsonResponse(res); // { error, message, loginResult:{ userId, name, token } }
+  }
+
+  async register({ name, email, password }) {
+    const url = this._buildUrl('/register');
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: this._headers({ auth: false, json: true }),
+      body: JSON.stringify({ name, email, password }),
+    });
+    return this._handleJsonResponse(res); // { error, message: 'User created' }
+  }
+
+  // ========== DATA (butuh token) ==========
   // GET /stories?location=1&page=&size=
   async listStories({ page = 1, size = 15, location = 1 } = {}) {
     const url = this._buildUrl('/stories', { page, size, location });
     const res = await fetch(url, {
       method: 'GET',
-      headers: this._headers({ auth: true }),
+      headers: this._headers({ auth: true, json: false }),
     });
     return this._handleJsonResponse(res);
   }
@@ -58,7 +79,7 @@ class ApiClient {
     const url = this._buildUrl(`/stories/${encodeURIComponent(id)}`);
     const res = await fetch(url, {
       method: 'GET',
-      headers: this._headers({ auth: true }),
+      headers: this._headers({ auth: true, json: false }),
     });
     return this._handleJsonResponse(res);
   }
@@ -77,7 +98,7 @@ class ApiClient {
     const url = this._buildUrl('/stories');
     const res = await fetch(url, {
       method: 'POST',
-      headers: this._headers({ auth: true }), // FormData tidak butuh Content-Type manual
+      headers: this._headers({ auth: true, json: false }), // FormData: jangan set Content-Type manual
       body: form,
     });
     return this._handleJsonResponse(res);
