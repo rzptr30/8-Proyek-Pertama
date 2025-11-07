@@ -6,11 +6,11 @@ FEATURES:
 - Map + marker dari API (location=1)
 - Add story (online) + offline queue (Outbox) + auto-sync saat online
 - Auth (register/login/logout)
-- PWA installable + offline shell + dynamic cache (stories, images)
-- Push Notification (toggle subscribe/unsubscribe, payload dinamis, action ke detail)
-- IndexedDB saved stories (CRUD + search + sort)
-- Aksesibilitas (fokus heading, aria drawer, aria-live status)
+- PWA installable + offline shell + dynamic caching (stories, images)
+- Push Notification (enable/disable, payload dinamis, action ke detail)
+- IndexedDB saved stories (CRUD + search + sort) + halaman #/saved
+- Aksesibilitas: label-for untuk input, fokus heading, aria drawer, aria-live status
 - Background Sync untuk POST /stories
 
 TESTED_BROWSERS=Chrome 131 (Windows), Edge 131
-NOTES=Pastikan mode Jangan Ganggu OS dimatikan saat menguji notifikasi.
+NOTES=Untuk uji notifikasi, pastikan mode Jangan Ganggu OS dimatikan dan izin notifikasi diizinkan pada origin GitHub Pages.
