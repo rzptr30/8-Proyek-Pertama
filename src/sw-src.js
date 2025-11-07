@@ -1,4 +1,4 @@
-/* global self */
+/* global self, location */
 import { precacheAndRoute, cleanupOutdatedCaches } from 'workbox-precaching';
 import { registerRoute, setCatchHandler } from 'workbox-routing';
 import { NetworkFirst, CacheFirst, StaleWhileRevalidate } from 'workbox-strategies';
@@ -12,8 +12,15 @@ cleanupOutdatedCaches();
 self.skipWaiting();
 self.addEventListener('activate', (evt) => evt.waitUntil(self.clients.claim()));
 
+// Fallback SPA (relatif agar bekerja di Pages & lokal)
+const BASE_PATH = new URL(self.registration.scope).pathname.replace(/\/$/, '');
+async function shellFallback() {
+  const rel = `${BASE_PATH}/index.html`.replace(/\/{2,}/g, '/');
+  return (await caches.match(rel)) || caches.match('/index.html');
+}
+
 setCatchHandler(async ({ event }) => {
-  if (event.request.mode === 'navigate') return caches.match('/index.html');
+  if (event.request.mode === 'navigate') return shellFallback();
   return Response.error();
 });
 
@@ -84,8 +91,9 @@ self.addEventListener('push', (event) => {
 
   const title = payload.title || 'Berbagi Cerita';
   const body = payload.body || 'Ada pembaruan cerita.';
-  const icon = payload.icon || '/images/icons/icon-192.png';
-  const badge = payload.badge || '/images/icons/icon-192.png';
+  // Gunakan path relatif agar valid di GitHub Pages
+  const icon = payload.icon || 'images/icons/icon-192.png';
+  const badge = payload.badge || 'images/icons/icon-192.png';
   const url = payload.url || '#/';
   const id = payload.id || '';
 
@@ -98,6 +106,8 @@ self.addEventListener('push', (event) => {
       { action: 'open', title: 'Buka Aplikasi' },
       ...(id ? [{ action: 'detail', title: 'Lihat Detail' }] : []),
     ],
+    tag: 'berbagi-cerita-push',
+    renotify: true,
   };
 
   event.waitUntil(
@@ -129,8 +139,9 @@ self.addEventListener('message', (event) => {
     const { title = 'Tes', body = 'Notifikasi lokal' } = event.data;
     self.registration.showNotification(title, {
       body,
-      icon: '/images/icons/icon-192.png',
+      icon: 'images/icons/icon-192.png',
       data: { url: '#/' },
-    });
+      tag: 'local-test'
+    }).catch(err => console.error('[SW] local-notify gagal', err));
   }
 });

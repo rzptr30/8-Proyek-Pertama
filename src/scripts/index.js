@@ -5,8 +5,8 @@ import App from './pages/app';
 import { registerSW } from './pwa/register-sw';
 import { syncOutbox } from './data/sync';
 
-// PASS base path repo ke SW agar path-nya benar di GitHub Pages
-registerSW('/8-Proyek-Pertama');
+// Daftarkan SW secara RELATIF agar bekerja di lokal & Pages
+registerSW();
 
 navigator.serviceWorker?.addEventListener('message', (evt) => {
   if (evt.data?.type === 'navigate' && evt.data.url) {

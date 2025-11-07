@@ -10,6 +10,7 @@ import AboutView from '../views/AboutView';
 import MapView from '../views/MapView';
 import AddView from '../views/AddView';
 import DetailView from '../views/DetailView';
+import SavedView from '../views/SavedView';
 
 // Presenters
 import HomePresenter from '../presenters/HomePresenter';
@@ -19,12 +20,14 @@ import AboutPresenter from '../presenters/AboutPresenter';
 import MapPresenter from '../presenters/MapPresenter';
 import AddPresenter from '../presenters/AddPresenter';
 import DetailPresenter from '../presenters/DetailPresenter';
+import SavedPresenter from '../presenters/SavedPresenter';
 
 const ROUTES = {
   '/': { view: HomeView, presenter: HomePresenter, requiresAuth: true, navKey: '/' },
   '/about': { view: AboutView, presenter: AboutPresenter, navKey: '/about' },
   '/map': { view: MapView, presenter: MapPresenter, requiresAuth: true, navKey: '/map' },
   '/add': { view: AddView, presenter: AddPresenter, requiresAuth: true, navKey: '/add' },
+  '/saved': { view: SavedView, presenter: SavedPresenter, requiresAuth: true, navKey: '/saved' },
   '/login': { view: LoginView, presenter: LoginPresenter, navKey: '/login' },
   '/register': { view: RegisterView, presenter: RegisterPresenter, navKey: '/register' },
   '/detail/:id': { view: DetailView, presenter: DetailPresenter, requiresAuth: true, navKey: '/' },
@@ -115,48 +118,16 @@ export default class App {
 
   _updateAuthNav() {
     const token = getApiToken();
-    const nav = document.getElementById('nav-list');
     const logoutBtn = document.getElementById('logout-button');
     const userStatus = document.getElementById('user-status');
 
-    // Cari semua elemen link login/register (termasuk parent <li> kalau ada)
-    const loginLinks = [
-      ...document.querySelectorAll('a[href="#/login"], [data-nav="login"]'),
-    ];
-    const registerLinks = [
-      ...document.querySelectorAll('a[href="#/register"], [data-nav="register"]'),
-    ];
-
-    const hide = (el) => {
-      if (!el) return;
-      el.setAttribute('hidden', 'true');
-      el.setAttribute('aria-hidden', 'true');
-      // Sembunyikan parent <li> jika ada
-      if (el.parentElement && el.parentElement.tagName === 'LI') {
-        el.parentElement.setAttribute('hidden', 'true');
-        el.parentElement.setAttribute('aria-hidden', 'true');
-      }
-    };
-    const show = (el) => {
-      if (!el) return;
-      el.removeAttribute('hidden');
-      el.removeAttribute('aria-hidden');
-      if (el.parentElement && el.parentElement.tagName === 'LI') {
-        el.parentElement.removeAttribute('hidden');
-        el.parentElement.removeAttribute('aria-hidden');
-      }
-    };
-
+    // Tampilkan/ubah status user
     if (token) {
       const { name } = getAuthUser();
       if (userStatus) userStatus.textContent = `Masuk sebagai ${(name || '').trim() || 'Pengguna'}`;
-      loginLinks.forEach(hide);
-      registerLinks.forEach(hide);
       if (logoutBtn) logoutBtn.hidden = false;
     } else {
       if (userStatus) userStatus.textContent = 'Belum masuk';
-      loginLinks.forEach(show);
-      registerLinks.forEach(show);
       if (logoutBtn) logoutBtn.hidden = true;
     }
   }

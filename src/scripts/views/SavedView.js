@@ -3,14 +3,22 @@ export default class SavedView {
     return `
       <section class="page" data-route="saved">
         <h1 class="page-title" data-page-title>Disimpan</h1>
+
         <div class="saved-controls">
-          <input id="saved-search" type="search" placeholder="Cari..." aria-label="Cari cerita tersimpan">
-          <select id="saved-sort" aria-label="Urutkan">
-            <option value="newest">Terbaru</option>
-            <option value="oldest">Terlama</option>
-            <option value="name">Nama</option>
-          </select>
+          <div class="field-inline">
+            <label for="saved-search">Cari</label>
+            <input id="saved-search" type="search" placeholder="Cari..." />
+          </div>
+          <div class="field-inline">
+            <label for="saved-sort">Urutkan</label>
+            <select id="saved-sort">
+              <option value="newest">Terbaru</option>
+              <option value="oldest">Terlama</option>
+              <option value="name">Nama</option>
+            </select>
+          </div>
         </div>
+
         <div id="saved-status" role="status" aria-live="polite" class="status"></div>
         <div id="outbox-section"></div>
         <ul id="saved-list" class="saved-list" aria-label="Daftar cerita tersimpan"></ul>
