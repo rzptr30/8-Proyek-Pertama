@@ -17,8 +17,14 @@ export default class HomeView {
   }
 
   async afterRender(_params, presenter) {
-    // Mulai load data
-    presenter.loadStories();
+    // Pola yang konsisten: tampilkan skeleton, ambil data, render hasil
+    this.showLoading();
+    try {
+      const { stories } = await presenter.load({ page: 1, size: 15, location: 1 });
+      this.showList(stories);
+    } catch (e) {
+      this.showError(e.message);
+    }
   }
 
   _contentEl() {
