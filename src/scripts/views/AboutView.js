@@ -1,15 +1,13 @@
 import { getApiBaseUrl, setApiBaseUrl, getApiToken } from '../data/config';
 
-// VAPID PUBLIC KEY (ganti dengan key asli dari modul Dicoding)
+// TODO: GANTI dengan VAPID PUBLIC KEY asli (URL-safe Base64) dari modul
 const VAPID_PUBLIC_KEY = 'BXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX';
 
 function urlBase64ToUint8Array(base64String) {
   const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
   const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
   const raw = atob(base64);
-  const output = new Uint8Array(raw.length);
-  for (let i = 0; i < raw.length; i++) output[i] = raw.charCodeAt(i);
-  return output;
+  return Uint8Array.from([...raw].map(c => c.charCodeAt(0)));
 }
 
 async function getExistingSubscription() {
@@ -18,12 +16,14 @@ async function getExistingSubscription() {
   return reg.pushManager.getSubscription();
 }
 
-async function subscribePush() {
-  const token = getApiToken();
-  if (!token) throw new Error('Belum login. Login dulu sebelum mengaktifkan push.');
-
+async function subscribePushWithServer(statusEl) {
+  statusEl.textContent = 'Mengaktifkan push (langkah 1: subscribe browser)...';
   const baseUrl = (getApiBaseUrl() || '').replace(/\/+$/, '');
   if (!baseUrl) throw new Error('Base URL belum disetel.');
+
+  const rawToken = getApiToken();
+  if (!rawToken) throw new Error('Belum login. Login dulu sebelum mengaktifkan push.');
+  const authHeader = `Bearer ${rawToken}`;
 
   if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
     throw new Error('Browser tidak mendukung Push API.');
@@ -32,24 +32,32 @@ async function subscribePush() {
   const reg = await navigator.serviceWorker.ready;
   let sub = await reg.pushManager.getSubscription();
   if (!sub) {
-    sub = await reg.pushManager.subscribe({
-      userVisibleOnly: true,
-      applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
-    });
+    try {
+      sub = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
+      });
+      console.log('[Push] subscribe baru endpoint:', sub.endpoint);
+    } catch (e) {
+      console.error('[Push] Gagal subscribe ke browser:', e);
+      throw new Error(`Gagal subscribe browser: ${e.message}`);
+    }
+  } else {
+    console.log('[Push] Sudah ada subscription endpoint:', sub.endpoint);
   }
 
-  // Ambil key p256dh & auth
+  // Ambil key
   const rawKey = sub.getKey('p256dh');
   const rawAuth = sub.getKey('auth');
   const p256dh = btoa(String.fromCharCode(...new Uint8Array(rawKey)));
   const auth = btoa(String.fromCharCode(...new Uint8Array(rawAuth)));
 
-  // Kirim ke server (endpoint yang benar)
+  statusEl.textContent = 'Mengirim subscription ke server...';
   const res = await fetch(`${baseUrl}/notifications/subscribe`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': token,
+      'Authorization': authHeader,
     },
     body: JSON.stringify({
       endpoint: sub.endpoint,
@@ -59,32 +67,46 @@ async function subscribePush() {
 
   if (!res.ok) {
     const txt = await res.text().catch(() => res.statusText);
-    throw new Error(`Gagal subscribe: ${res.status} ${txt}`);
+    console.error('[Push] Server subscribe gagal:', res.status, txt);
+    throw new Error(`Server menolak subscribe: ${res.status} ${txt}`);
   }
+
+  console.log('[Push] Server subscribe BERHASIL');
   return sub;
 }
 
-async function unsubscribePush() {
-  const token = getApiToken();
+async function unsubscribePush(statusEl) {
+  statusEl.textContent = 'Menonaktifkan push...';
   const baseUrl = (getApiBaseUrl() || '').replace(/\/+$/, '');
+  const rawToken = getApiToken();
+  const authHeader = rawToken ? `Bearer ${rawToken}` : '';
   const sub = await getExistingSubscription();
-  if (!sub) return;
-
+  if (!sub) {
+    statusEl.textContent = 'Tidak ada subscription untuk dihapus.';
+    return;
+  }
   try {
-    if (baseUrl && token) {
-      await fetch(`${baseUrl}/notifications/unsubscribe`, {
+    if (baseUrl && authHeader) {
+      const res = await fetch(`${baseUrl}/notifications/unsubscribe`, {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': token,
+          'Authorization': authHeader,
         },
         body: JSON.stringify({ endpoint: sub.endpoint }),
       });
+      if (!res.ok) {
+        const txt = await res.text().catch(() => res.statusText);
+        console.warn('[Push] Server unsubscribe gagal:', res.status, txt);
+      } else {
+        console.log('[Push] Server unsubscribe OK');
+      }
     }
   } catch (e) {
-    console.warn('[Push] Unsubscribe server gagal:', e);
+    console.warn('[Push] Unsubscribe server error:', e);
   }
   await sub.unsubscribe();
+  statusEl.textContent = 'Push dinonaktifkan.';
 }
 
 export default class AboutView {
@@ -96,13 +118,13 @@ export default class AboutView {
 
         <section aria-labelledby="push-title" class="push-section">
           <h2 id="push-title">Push Notification</h2>
-          <p id="push-status" role="status" aria-live="polite">Memeriksa status...</p>
-          <div class="push-controls" style="display:flex;gap:8px;flex-wrap:wrap">
-            <button type="button" id="btn-push-enable">Enable Push</button>
-            <button type="button" id="btn-push-disable" hidden>Disable Push</button>
-            <button type="button" id="btn-push-local">Uji Notifikasi Lokal</button>
-          </div>
-          <small>Pastikan izin notifikasi telah diberikan di browser.</small>
+            <p id="push-status" role="status" aria-live="polite">Memeriksa status...</p>
+            <div class="push-controls" style="display:flex;gap:8px;flex-wrap:wrap">
+              <button type="button" id="btn-push-enable">Enable Push</button>
+              <button type="button" id="btn-push-disable" hidden>Disable Push</button>
+              <button type="button" id="btn-push-local">Uji Notifikasi Lokal</button>
+            </div>
+            <small>Pastikan izin notifikasi telah diberikan di browser.</small>
         </section>
 
         <hr />
@@ -145,20 +167,21 @@ export default class AboutView {
     const localBtn = document.getElementById('btn-push-local');
 
     async function refreshPushUI() {
-      const permission = Notification.permission;
       const existing = await getExistingSubscription();
-      const token = getApiToken();
-      statusEl.textContent = `Izin: ${permission}. Status: ${existing ? 'Subscribed' : 'Not subscribed'}${token ? '' : ' (Belum login)'}`;
+      const loggedIn = !!getApiToken();
+      statusEl.textContent = `Izin: ${Notification.permission}. Status: ${existing ? 'Subscribed' : 'Not subscribed'}${loggedIn ? '' : ' (Belum login)'}`;
       enableBtn.hidden = !!existing;
       disableBtn.hidden = !existing;
     }
 
     enableBtn.addEventListener('click', async () => {
+      console.log('[PushUI] Enable clicked');
       statusEl.textContent = 'Mengaktifkan push...';
       try {
-        await subscribePush();
+        await subscribePushWithServer(statusEl);
         statusEl.textContent = 'Subscribed ke server.';
       } catch (e) {
+        console.error('[PushUI] Enable error:', e);
         statusEl.textContent = `Gagal subscribe: ${e.message}`;
       } finally {
         refreshPushUI();
@@ -166,11 +189,11 @@ export default class AboutView {
     });
 
     disableBtn.addEventListener('click', async () => {
-      statusEl.textContent = 'Menonaktifkan push...';
+      console.log('[PushUI] Disable clicked');
       try {
-        await unsubscribePush();
-        statusEl.textContent = 'Push dinonaktifkan.';
+        await unsubscribePush(statusEl);
       } catch (e) {
+        console.error('[PushUI] Disable error:', e);
         statusEl.textContent = `Gagal unsubscribe: ${e.message}`;
       } finally {
         refreshPushUI();
@@ -181,22 +204,15 @@ export default class AboutView {
       statusEl.textContent = 'Mengirim notifikasi lokal...';
       try {
         const reg = await navigator.serviceWorker.ready;
-        reg.active?.postMessage({
-          type: 'local-notify',
-          title: 'Tes Lokal',
-          body: 'Ini notifikasi lokal.',
-        });
+        reg.active?.postMessage({ type: 'local-notify', title: 'Tes Lokal', body: 'Ini notifikasi lokal.' });
         statusEl.textContent = 'Notifikasi lokal dikirim.';
       } catch (e) {
         statusEl.textContent = `Gagal notifikasi lokal: ${e.message}`;
       }
     });
 
-    // Minta izin jika masih default
     if (Notification.permission === 'default') {
-      try {
-        await Notification.requestPermission();
-      } catch {}
+      try { await Notification.requestPermission(); } catch {}
     }
 
     await refreshPushUI();
