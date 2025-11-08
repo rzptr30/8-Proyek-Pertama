@@ -50,7 +50,7 @@ export default class SavedView {
           <ul class="outbox-list">
             ${items.map(o => `
               <li class="outbox-item" data-local-id="${o.localId}">
-                <strong>${escapeHtml(o.description.slice(0, 40))}</strong>
+                <strong>${escapeHtml(o.description.slice(0, 60))}</strong>
                 <small>Status: ${o.status}</small>
                 ${o.errorMessage ? `<small class="error">${escapeHtml(o.errorMessage)}</small>` : ''}
               </li>
@@ -81,14 +81,14 @@ export default class SavedView {
 
       listEl.innerHTML = items.length
         ? items.map(s => `
-            <li class="saved-item" data-id="${s.id}">
+            <li class="saved-item" data-id="${escapeHtml(s.id)}">
               <article>
                 <h3>${escapeHtml(s.name)}</h3>
-                <p>${escapeHtml((s.description || '').slice(0, 120))}</p>
-                <small>${new Date(s.createdAt).toLocaleString('id-ID')}</small>
+                <p>${escapeHtml((s.description || '').slice(0, 140))}</p>
+                <small>${escapeHtml(new Date(s.createdAt).toLocaleString('id-ID'))}</small>
                 <div class="actions">
                   <button type="button" class="btn-delete" aria-label="Hapus ${escapeHtml(s.name)}">Hapus</button>
-                  <a href="#/detail/${s.id}">Detail</a>
+                  <a href="#/detail/${escapeHtml(s.id)}">Detail</a>
                 </div>
               </article>
             </li>
@@ -99,9 +99,9 @@ export default class SavedView {
     };
 
     const reload = async () => {
-      statusEl.textContent = 'Memuat...';
+      statusEl.textContent = 'Memuat data simpanan...';
       state = await presenter.load();
-      statusEl.textContent = `Tersimpan: ${state.saved.length}, Outbox: ${state.outbox.length}`;
+      statusEl.textContent = `Tersimpan: ${state.saved.length} | Outbox: ${state.outbox.length}`;
       applyRender();
     };
 
@@ -117,7 +117,6 @@ export default class SavedView {
     searchEl.addEventListener('input', applyRender);
     sortEl.addEventListener('change', applyRender);
 
-    // Dengarkan event perubahan simpanan (optimistic update)
     window.addEventListener('saved:changed', () => {
       reload().catch(err => console.error('[SavedView] reload gagal setelah event', err));
     });

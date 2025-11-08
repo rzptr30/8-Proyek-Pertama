@@ -45,11 +45,12 @@ export default class DetailView {
         </article>
       `;
 
-      const existing = await getSavedStory(story.id);
+      const existing = story.id ? await getSavedStory(story.id) : null;
       toggleButtons(!!existing);
 
       saveBtn.addEventListener('click', async () => {
         try {
+          if (!story.id) throw new Error('ID cerita tidak valid');
           await saveStory({
             id: story.id,
             name: story.name,
@@ -57,10 +58,10 @@ export default class DetailView {
             photoUrl: story.photoUrl,
             lat: story.lat,
             lon: story.lon,
-            createdAt: story.createdAt,
+            createdAt: story.createdAt || new Date().toISOString(),
           });
           toggleButtons(true);
-          statusEl.textContent = 'Cerita disimpan.';
+          statusEl.textContent = 'Cerita disimpan. Buka menu Disimpan.';
         } catch (e) {
           statusEl.textContent = e?.message || 'Gagal menyimpan cerita.';
         }
@@ -68,6 +69,7 @@ export default class DetailView {
 
       unsaveBtn.addEventListener('click', async () => {
         try {
+          if (!story.id) throw new Error('ID cerita tidak valid');
           await removeSavedStory(story.id);
           toggleButtons(false);
           statusEl.textContent = 'Simpanan dihapus.';
@@ -81,7 +83,7 @@ export default class DetailView {
         unsaveBtn.hidden = !saved;
       }
     } catch (e) {
-      container.innerHTML = `<p class="status--error">Gagal memuat detail: ${escapeHtml(e?.message || 'Unknown')}</p>`;
+      container.innerHTML = `<p class="status--error">Gagal memuat detail: ${escapeHtml(e?.message || 'Unknown error')}</p>`;
     }
   }
 }

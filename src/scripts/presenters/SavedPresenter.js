@@ -1,7 +1,9 @@
 import { getAllSavedStories, removeSavedStory, getOutboxStories } from '../data/saved-store';
 
 export default class SavedPresenter {
-  constructor(view) { this._view = view; }
+  constructor(view) {
+    this._view = view;
+  }
 
   async load() {
     const saved = await getAllSavedStories();

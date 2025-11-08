@@ -1,34 +1,29 @@
-// Pastikan VAPID_PUBLIC_KEY kamu sesuai modul / dokumentasi kelas Dicoding.
-// Biasanya bentuk Base64 URL-safe. Contoh placeholder:
-const VAPID_PUBLIC_KEY = 'BExxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx';
+import { getApiBaseUrl, getApiToken } from './config';
+
+// Ganti ini dengan VAPID key dari modul Dicoding (bentuk URL-safe Base64)
+const VAPID_PUBLIC_KEY = 'BXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX';
 
 function urlBase64ToUint8Array(base64String) {
   const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
-  const base64 = (base64String + padding)
-    .replace(/-/g, '+')
-    .replace(/_/g, '/');
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
   const raw = atob(base64);
-  const outputArray = new Uint8Array(raw.length);
-  for (let i = 0; i < raw.length; i++) {
-    outputArray[i] = raw.charCodeAt(i);
-  }
-  return outputArray;
+  const output = new Uint8Array(raw.length);
+  for (let i = 0; i < raw.length; i++) output[i] = raw.charCodeAt(i);
+  return output;
 }
 
-// Ambil existing subscription (kalau ada)
 export async function getExistingSubscription() {
   if (!('serviceWorker' in navigator)) return null;
   const reg = await navigator.serviceWorker.ready;
   return reg.pushManager.getSubscription();
 }
 
-// Subscribe ke Push + kirim ke server
 export async function subscribePush() {
   if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
     throw new Error('Browser tidak mendukung Push API.');
   }
-  const reg = await navigator.serviceWorker.ready;
 
+  const reg = await navigator.serviceWorker.ready;
   let sub = await reg.pushManager.getSubscription();
   if (!sub) {
     sub = await reg.pushManager.subscribe({
@@ -42,10 +37,18 @@ export async function subscribePush() {
   const p256dh = btoa(String.fromCharCode(...new Uint8Array(rawKey)));
   const auth = btoa(String.fromCharCode(...new Uint8Array(rawAuth)));
 
-  // Kirim ke server
-  const res = await fetch('https://story-api.dicoding.dev/v1/notifications/subscribe', {
+  const baseUrl = (getApiBaseUrl() || '').replace(/\/+$/, '');
+  if (!baseUrl) throw new Error('Base URL belum disetel di halaman Tentang.');
+
+  const token = getApiToken();
+  if (!token) throw new Error('Belum login. Silakan login sebelum mengaktifkan push.');
+
+  const res = await fetch(`${baseUrl}/notifications/subscribe`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': token,
+    },
     body: JSON.stringify({
       endpoint: sub.endpoint,
       keys: { p256dh, auth },
@@ -54,30 +57,32 @@ export async function subscribePush() {
 
   if (!res.ok) {
     const txt = await res.text().catch(() => res.statusText);
-    throw new Error(`Gagal subscribe server: ${res.status} ${txt}`);
+    throw new Error(`Gagal subscribe: ${res.status} ${txt}`);
   }
 
-  return { sub };
+  return sub;
 }
 
-// Unsubscribe (lokal + server)
 export async function unsubscribePush() {
   const sub = await getExistingSubscription();
   if (!sub) return;
+  const baseUrl = (getApiBaseUrl() || '').replace(/\/+$/, '');
+  const token = getApiToken();
 
-  // DELETE atau POST sesuai dokumentasi. Asumsi DELETE di sini:
+  // Server mungkin meminta endpoint untuk unsubscribe.
   try {
-    await fetch('https://story-api.dicoding.dev/v1/notifications/unsubscribe', {
-      method: 'DELETE',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ endpoint: sub.endpoint }),
-    });
+    if (baseUrl && token) {
+      await fetch(`${baseUrl}/notifications/unsubscribe`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': token,
+        },
+        body: JSON.stringify({ endpoint: sub.endpoint }),
+      });
+    }
   } catch (e) {
-    console.warn('[Push] Gagal kirim unsubscribe ke server:', e);
+    console.warn('[Push] Unsubscribe server gagal:', e);
   }
-
   await sub.unsubscribe();
 }
-
-// Cek status tersubscribe di server (opsional jika ada endpoint verifikasi)
-// export async function checkServerSubscription(endpoint) { ... }

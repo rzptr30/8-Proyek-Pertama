@@ -5,15 +5,28 @@ import { NetworkFirst, CacheFirst, StaleWhileRevalidate } from 'workbox-strategi
 import { ExpirationPlugin } from 'workbox-expiration';
 import { BackgroundSyncPlugin } from 'workbox-background-sync';
 
-// ============ Workbox (PWA Advanced) ============
+// ============ Precache & Cleanup ============
 precacheAndRoute(self.__WB_MANIFEST || []);
 cleanupOutdatedCaches();
 
 self.skipWaiting();
 self.addEventListener('activate', (evt) => evt.waitUntil(self.clients.claim()));
 
-// Fallback SPA (relatif agar bekerja di Pages & lokal)
+// ============ Warm-Up (Agar Offline Berjalan di Dev dan Production) ============
 const BASE_PATH = new URL(self.registration.scope).pathname.replace(/\/$/, '');
+self.addEventListener('install', (event) => {
+  event.waitUntil((async () => {
+    try {
+      const cache = await caches.open('pages');
+      const rel = `${BASE_PATH}/index.html`.replace(/\/{2,}/g, '/');
+      await cache.add(new Request(rel, { cache: 'reload' }));
+    } catch (e) {
+      // Di dev bisa gagal karena path, abaikan.
+    }
+  })());
+});
+
+// ============ Offline Fallback ============
 async function shellFallback() {
   const rel = `${BASE_PATH}/index.html`.replace(/\/{2,}/g, '/');
   return (await caches.match(rel)) || caches.match('/index.html');
@@ -24,6 +37,7 @@ setCatchHandler(async ({ event }) => {
   return Response.error();
 });
 
+// ============ Routing Konten ============
 registerRoute(
   ({ request }) => request.mode === 'navigate',
   new NetworkFirst({ cacheName: 'pages', networkTimeoutSeconds: 5 })
@@ -74,24 +88,16 @@ async function openUrl(url) {
 }
 
 self.addEventListener('push', (event) => {
-  console.log('[SW] push event diterima');
   let payload = {};
   try {
-    if (event.data) {
-      payload = event.data.json();
-      console.log('[SW] payload JSON:', payload);
-    } else {
-      console.log('[SW] event.data kosong');
-    }
-  } catch (e) {
+    if (event.data) payload = event.data.json();
+  } catch {
     const text = event.data?.text() || '';
-    console.warn('[SW] gagal parse json, pakai text fallback:', text);
-    payload = { title: 'Notifikasi', body: text || 'Push tanpa payload.' };
+    payload = { title: 'Berbagi Cerita', body: text || 'Push tanpa payload.' };
   }
 
   const title = payload.title || 'Berbagi Cerita';
   const body = payload.body || 'Ada pembaruan cerita.';
-  // Gunakan path relatif agar valid di GitHub Pages
   const icon = payload.icon || 'images/icons/icon-192.png';
   const badge = payload.badge || 'images/icons/icon-192.png';
   const url = payload.url || '#/';
@@ -110,16 +116,7 @@ self.addEventListener('push', (event) => {
     renotify: true,
   };
 
-  event.waitUntil(
-    (async () => {
-      try {
-        console.log('[SW] menampilkan notifikasi:', title);
-        await self.registration.showNotification(title, options);
-      } catch (err) {
-        console.error('[SW] gagal showNotification', err);
-      }
-    })()
-  );
+  event.waitUntil(self.registration.showNotification(title, options));
 });
 
 self.addEventListener('notificationclick', (event) => {
@@ -127,21 +124,19 @@ self.addEventListener('notificationclick', (event) => {
   const action = event.action;
   const data = event.notification.data || {};
   let target = data.url || '#/';
-  if (action === 'detail' && data.id) {
-    target = `#/detail/${data.id}`;
-  }
+  if (action === 'detail' && data.id) target = `#/detail/${data.id}`;
   event.waitUntil(openUrl(target));
 });
 
-// Uji notifikasi lokal dari halaman (tanpa push)
+// ============ Local Test Notification ============
 self.addEventListener('message', (event) => {
   if (event.data?.type === 'local-notify') {
-    const { title = 'Tes', body = 'Notifikasi lokal' } = event.data;
+    const { title = 'Tes Lokal', body = 'Notifikasi lokal.' } = event.data;
     self.registration.showNotification(title, {
       body,
       icon: 'images/icons/icon-192.png',
       data: { url: '#/' },
       tag: 'local-test'
-    }).catch(err => console.error('[SW] local-notify gagal', err));
+    }).catch(()=>{});
   }
 });
