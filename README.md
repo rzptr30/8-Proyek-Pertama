@@ -1,179 +1,78 @@
-# Berbagi Cerita — Submission Proyek Web API + Peta + Aksesibilitas (SPA)
+# Berbagi Cerita
 
-Aplikasi Single-Page Application (SPA) bertema “Berbagi Cerita” yang menampilkan daftar cerita dari Story API, memvisualisasikan lokasi pada peta digital (OpenStreetMap/Leaflet), serta menyediakan fitur tambah cerita baru dengan unggah gambar atau kamera langsung. Aplikasi dibangun dengan arsitektur MVP, transisi halaman kustom, dan aksesibilitas yang memperhatikan standar WCAG.
+Aplikasi SPA dengan peta, PWA (installable + offline), push notification, dan penyimpanan lokal (IndexedDB).
 
-## Ringkasan Fitur Utama
-- SPA (Hash Routing): #/, #/map, #/add, #/about, #/detail/:id
-- Transisi Halaman Kustom: View Transitions API dengan fallback CSS
-- Arsitektur MVP: Presenter terpisah dari View
-- Daftar Cerita dari API: Gambar + ≥3 teks (judul/nama, deskripsi singkat, tanggal)
-- Peta Digital (Leaflet + OSM):
-  - Marker + popup
-  - Interaktivitas: sinkronisasi list ↔ marker, highlight aktif
-  - Multiple tile layers + layer control (Advance)
-- Form Tambah Cerita:
-  - Upload gambar, pilih lokasi via klik peta (marker draggable)
-  - Validasi input + pesan sukses/gagal (aria-live)
-  - Opsi kamera langsung (getUserMedia) dan menutup media stream
-- Aksesibilitas:
-  - Alt text, HTML semantik, label input
-  - Responsif (375px, 768px, 1024px)
-  - Skip to content, operable via keyboard
-  - Reduced motion: hormati preferensi pengguna
+- Live Demo: https://rzptr30.github.io/8-Proyek-Pertama/
+- Base API: https://story-api.dicoding.dev/v1
 
-## Prasyarat
-- Node.js LTS (16+ atau 18+ disarankan)
-- Internet (untuk memuat tile peta dan Story API)
-
-## Cara Menjalankan (Development)
-1. Install dependency:
-   ```
-   npm install
-   ```
-2. Jalankan dev server:
-   ```
-   npm run start-dev
-   ```
-3. Buka di browser:
-   - http://localhost:9000
-
-## Build Production dan Serve
-- Build:
-  ```
-  npm run build
-  ```
-  Hasil build ada di folder `dist/`.
-- Preview hasil build (opsional):
-  ```
-  npm run serve
-  ```
-  Lalu buka `http://localhost:8080` (port dari http-server bisa berbeda di mesin Anda).
-
-## Konfigurasi API (WAJIB)
-Aplikasi membaca Base URL & Token dari localStorage melalui halaman “Tentang”:
-1. Buka menu “Tentang”.
-2. Isi Base URL, contoh: `https://story-api.dicoding.dev/v1`
-3. Jika API butuh autentikasi, isi Token (Bearer token).
-4. Klik “Simpan Pengaturan”.
-
-Catatan:
-- Sesuai ketentuan penilaian, API key/token yang digunakan juga harus dicantumkan pada berkas `STUDENT.txt` di root proyek (untuk keperluan review).
-- Aplikasi runtime TIDAK membaca `STUDENT.txt`. File ini hanya dokumentasi nilai credential yang digunakan.
-
-## Panduan Uji Kriteria (Step-by-step)
-Berikut langkah yang bisa diikuti reviewer untuk memverifikasi seluruh kriteria:
-
-### Kriteria 1: SPA dan Transisi Halaman
-- Navigasi tanpa reload (hash routing): klik menu Beranda, Peta, Tambah, Tentang.
-- Transisi halaman halus terlihat saat berpindah route.
-- Arsitektur MVP:
-  - Folder `src/scripts/presenters/` berisi Presenter.
-  - Folder `src/scripts/views/` berisi View.
-- Fallback CSS aktif jika browser tidak mendukung View Transitions API.
-
-Lokasi file:
-- Router: `src/scripts/router/hash-router.js`
-- Orkestrasi App + transisi: `src/scripts/pages/app.js`
-- View/Presenter: `src/scripts/views/*`, `src/scripts/presenters/*`
-
-### Kriteria 2: Menampilkan Data dan Marker pada Peta
-- Halaman “Beranda” memuat daftar cerita dari API:
-  - Tampilkan gambar + ≥3 teks (nama, deskripsi ringkas, tanggal).
-- Halaman “Peta”:
-  - Marker dan popup (gambar + ringkasan).
-  - Interaktivitas (Skilled): klik item daftar → peta fokus + popup; klik marker → item daftar di-highlight.
-  - Multiple tile layers (Advance): ganti layer via kontrol kanan atas (OSM, CARTO Light, Esri Imagery).
-
-Lokasi file:
-- API client: `src/scripts/data/api-client.js`, `src/scripts/data/config.js`
-- Beranda: `src/scripts/presenters/HomePresenter.js`, `src/scripts/views/HomeView.js`
-- Peta: `src/scripts/presenters/MapPresenter.js`, `src/scripts/views/MapView.js`
-- Leaflet assets (icon fix): `src/scripts/utils/leaflet-assets.js`
-
-### Kriteria 3: Memiliki Fitur Tambah Data Baru
-- Halaman “Tambah”:
-  - Pilih lokasi via klik peta (marker draggable), otomatis isi lat/lon.
-  - Upload file gambar ATAU gunakan kamera:
-    - “Mulai Kamera”, “Ambil Foto”, “Hentikan Kamera”
-    - Stream kamera dimatikan saat panel ditutup/navigasi.
-  - Validasi form (client-side): deskripsi minimal 5 karakter, foto wajib, lokasi wajib.
-  - Pengiriman async ke API menggunakan Fetch + FormData.
-  - Pesan sukses/gagal jelas (aria-live).
-  
-Lokasi file:
-- Add Form: `src/scripts/presenters/AddPresenter.js`, `src/scripts/views/AddView.js`
-- Kamera: `src/scripts/utils/camera.js`
-
-### Kriteria 4: Aksesibilitas sesuai Standar
-- Alt pada setiap gambar (kosong `""` jika dekoratif).
-- HTML semantik, label pada input.
-- Skip to content: tautan “Lewati ke konten utama”.
-- Keyboard operable:
-  - Tombol menu dengan `aria-controls` dan `aria-expanded`.
-  - ESC menutup menu.
-  - Fokus berpindah ke judul halaman saat route berubah.
-  - Daftar lokasi di Peta menggunakan role yang sesuai (listbox/option) dan `aria-selected`.
-- Responsif:
-  - 375px (mobile), 768px (tablet), 1024px (desktop) tanpa elemen bertumpuk.
-- Reduced Motion:
-  - Transisi/animasi dinonaktifkan saat preferensi pengguna “Reduce motion” aktif.
-
-Lokasi file:
-- Struktur HTML: `src/index.html`
-- Gaya & responsif & aksesibilitas: `src/styles/styles.css`
-- Focus management: `src/scripts/pages/app.js`
-
-## Struktur Proyek
-```
-src/
-  index.html
-  styles/
-    styles.css
-  scripts/
-    index.js
-    pages/
-      app.js
-    router/
-      hash-router.js
-    data/
-      api-client.js
-      config.js
-    presenters/
-      HomePresenter.js
-      MapPresenter.js
-      AddPresenter.js
-      AboutPresenter.js
-      DetailPresenter.js
-    views/
-      HomeView.js
-      MapView.js
-      AddView.js
-      AboutView.js
-      DetailView.js
-    utils/
-      leaflet-assets.js
-      camera.js
-      format.js
-public/ (disalin ke dist saat build)
-```
+## Fitur
+- SPA (hash router), guarded routes, view transitions
+- Auth (login/register/logout)
+- Map (Leaflet) + marker dari API (location=1)
+- Add Story (online) + Outbox (offline queue) + Background Sync (POST /stories)
+- IndexedDB saved stories (CRUD) + halaman `#/saved` (hanya baca dari IDB)
+- PWA installable + offline shell + dynamic cache (pages, static, images)
+- Push Notification (enable/disable), local test notification
 
 ## Teknologi
-- Bundler: Webpack
-- Peta: Leaflet + OpenStreetMap (tanpa API key)
-- Transisi: View Transitions API + fallback CSS
-- Akses Kamera: MediaStream (getUserMedia)
+- Webpack + Workbox InjectManifest
+- Workbox: precaching, routing, strategies, background sync
+- IndexedDB via `idb`
+- Leaflet
 
-## Packaging Submission (ZIP)
-- Jalankan `npm run build` untuk menghasilkan folder `dist/`.
-- Buat ZIP berisi seluruh proyek (bukan hanya dist), termasuk:
-  - `src/`, `webpack.*.js`, `package.json`, `package-lock.json`, `STUDENT.txt`, aset, dst.
-- Sertakan video cara pengiriman (sesuai instruksi Dicoding).
-- Hindari submit berkali-kali agar review tidak tertunda.
+## Menjalankan
+```bash
+npm install
+# Development (tidak ada precache; offline tidak akurat di dev)
+npm run start-dev
 
-## Catatan
-- Jika Story API membutuhkan token, pastikan:
-  - Di-runtime: set lewat halaman “Tentang”.
-  - Untuk reviewer: cantumkan nilai token pada `STUDENT.txt`.
-- Hindari plagiat. Kode ini adalah hasil implementasi sendiri untuk memenuhi kriteria tugas.
+# Production build (disarankan untuk uji offline & push)
+npm run build
+npx http-server dist -p 8081
+# buka http://localhost:8081/
+```
 
-Selamat mencoba dan semoga lulus dengan nilai terbaik!
+## PWA & Offline
+- Service Worker melakukan precache (production build) dan warm-up `index.html` saat install, sehingga:
+  - Offline di localhost (production build) dan GitHub Pages menampilkan shell aplikasi (bukan halaman dino).
+- Uji: DevTools → Application → Service Workers → centang "Offline" → reload.
+
+## Push Notification
+- VAPID_PUBLIC_KEY: `BCCs2eonMI-6H2ctvFaWg-UYdDv387Vno_bzUzALpB442r2lCnsHmtrx8biyPi_E-1fSGABK_Qs_GlvPoJJqxbk`
+- Secure Origin: gunakan HTTPS (GitHub Pages) atau `http://localhost`. Jangan uji di `http://192.168.x.x`.
+- Langkah uji:
+  1. Login, pastikan token tersimpan.
+  2. Buka `#/about` dan pastikan Base URL = `https://story-api.dicoding.dev/v1`.
+  3. Klik "Enable Push" → cek Network: `POST /v1/notifications/subscribe` (status 200/201).
+  4. Klik "Uji Notifikasi Lokal" → notifikasi muncul.
+  5. Klik "Disable Push" → `DELETE /v1/notifications/unsubscribe` (OK).
+
+## IndexedDB (Saved)
+- DB: `stories-db`
+  - Store: `savedStories` (keyPath: `id`)
+  - Store: `outboxStories` (keyPath: `localId`)
+- Halaman `#/saved` menampilkan **hanya** data dari IndexedDB (bukan fetch API).
+- Uji:
+  1. Detail → "Simpan" → `savedStories` terisi.
+  2. `#/saved` menampilkan item.
+  3. "Hapus" → item hilang dari UI dan DB.
+  4. Offline → `#/saved` tetap tampil.
+
+## Deploy
+- GitHub Pages
+```bash
+npm run build
+npm run deploy:pages
+```
+
+## Troubleshooting
+- Halaman dino saat offline:
+  - Pastikan menjalankan production build (bukan `start-dev`).
+  - Pastikan SW status "activated" sebelum toggle Offline.
+- Push tidak jalan:
+  - Origin harus HTTPS atau `http://localhost`.
+  - Pastikan Base URL dan token valid.
+  - Cek DevTools Network ada `POST /v1/notifications/subscribe`.
+
+## Lisensi
+ISC

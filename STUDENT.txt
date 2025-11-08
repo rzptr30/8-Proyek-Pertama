@@ -1,16 +1,44 @@
 BASE_URL=https://story-api.dicoding.dev/v1
 DEPLOY_URL=https://rzptr30.github.io/8-Proyek-Pertama/
 
-FEATURES:
-- SPA + guarded routes + view transitions
-- Map + marker dari API (location=1)
-- Add story (online) + offline queue (Outbox) + auto-sync saat online
-- Auth (register/login/logout)
-- PWA installable + offline shell + dynamic caching (stories, images)
-- Push Notification (enable/disable, payload dinamis, action ke detail)
-- IndexedDB saved stories (CRUD + search + sort) + halaman #/saved
-- Aksesibilitas: label-for untuk input, fokus heading, aria drawer, aria-live status
-- Background Sync untuk POST /stories
+VAPID_PUBLIC_KEY=BCCs2eonMI-6H2ctvFaWg-UYdDv387Vno_bzUzALpB442r2lCnsHmtrx8biyPi_E-1fSGABK_Qs_GlvPoJJqxbk
 
-TESTED_BROWSERS=Chrome 131 (Windows), Edge 131
-NOTES=Untuk uji notifikasi, pastikan mode Jangan Ganggu OS dimatikan dan izin notifikasi diizinkan pada origin GitHub Pages.
+SECURE_ORIGIN_NOTE=Push Notification hanya berfungsi di origin aman: HTTPS (GitHub Pages) atau http://localhost. Jangan menguji di http://192.168.x.x karena akan gagal di Chrome.
+
+FITUR_UTAMA=
+- SPA (hash router) + guarded routes + view transitions
+- Auth (login/register/logout)
+- Map (Leaflet) + marker dari API (location=1)
+- Add Story (online) + Outbox (offline queue) + Background Sync (POST /stories)
+- IndexedDB (stories-db) dengan stores: savedStories (CRUD), outboxStories
+- Halaman #/saved menampilkan HANYA item dari IndexedDB (bukan seluruh story API)
+- PWA installable, offline shell (fallback), dynamic cache (pages/static/images)
+- Push Notification (enable/disable), endpoint:
+/v1/notifications/subscribe (POST), /v1/notifications/unsubscribe (DELETE)
+- Local test notification (tanpa server push)
+
+CARA_UJI_PUSH=
+1) Login agar token tersimpan.
+2) Buka menu Tentang. Pastikan Base URL: https://story-api.dicoding.dev/v1.
+3) Klik "Enable Push" → di Network muncul POST /v1/notifications/subscribe (status 200/201).
+4) Klik "Uji Notifikasi Lokal" → notifikasi muncul dari SW.
+5) Klik "Disable Push" → di Network muncul DELETE /v1/notifications/unsubscribe (OK).
+
+CARA_UJI_OFFLINE=
+1) Production build (dist) atau GitHub Pages.
+2) Buka beranda + detail + halaman #/saved.
+3) DevTools → Application → centang "Offline" → reload → shell aplikasi tetap tampil (bukan laman dino).
+Catatan: SW melakukan warm-up index.html pada install agar offline dev/production berjalan.
+
+CARA_UJI_INDEXEDDB=
+1) Buka detail cerita → klik "Simpan".
+2) Application → IndexedDB → stories-db → savedStories berisi entry.
+3) Buka #/saved → tampil item yang disimpan (bukan semua story).
+4) Klik "Hapus" → entry hilang dari UI dan IndexedDB.
+5) Offline → #/saved tetap menampilkan data.
+
+BROWSER_DIUJI=Chrome 131 (Windows), Edge 131
+
+CATATAN=
+- Ikon PWA relatif agar valid di GitHub Pages subfolder.
+- node_modules tidak disertakan dalam ZIP submission.
