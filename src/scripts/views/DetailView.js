@@ -35,17 +35,16 @@ export default class DetailView {
     try {
       const data = await apiClient.getStoryDetail(id);
       const story = data?.story || data || {};
+
       container.innerHTML = `
         <article>
           <h2>${escapeHtml(story.name || 'Tanpa Nama')}</h2>
           ${story.photoUrl ? `<img src="${story.photoUrl}" alt="Foto cerita ${escapeHtml(story.name || '')}" style="max-width:100%;height:auto"/>` : ''}
           <p>${escapeHtml(story.description || '')}</p>
-          ${story.lat != null && story.lon != null
-            ? `<small>Lokasi: ${story.lat}, ${story.lon}</small>` : ''}
+          ${story.lat != null && story.lon != null ? `<small>Lokasi: ${story.lat}, ${story.lon}</small>` : ''}
         </article>
       `;
 
-      // Toggle tombol simpan/hapus sesuai status
       const existing = await getSavedStory(story.id);
       toggleButtons(!!existing);
 

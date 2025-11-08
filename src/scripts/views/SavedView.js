@@ -32,8 +32,33 @@ export default class SavedView {
     const searchEl = document.getElementById('saved-search');
     const sortEl = document.getElementById('saved-sort');
     const outboxSection = document.getElementById('outbox-section');
-
     let state = { saved: [], outbox: [] };
+
+    const escapeHtml = (s) =>
+      String(s || '')
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#39;');
+
+    const renderOutbox = (items) => {
+      if (!items.length) return '';
+      return `
+        <div class="outbox-wrap">
+          <h2>Menunggu Sinkronisasi (${items.length})</h2>
+          <ul class="outbox-list">
+            ${items.map(o => `
+              <li class="outbox-item" data-local-id="${o.localId}">
+                <strong>${escapeHtml(o.description.slice(0, 40))}</strong>
+                <small>Status: ${o.status}</small>
+                ${o.errorMessage ? `<small class="error">${escapeHtml(o.errorMessage)}</small>` : ''}
+              </li>
+            `).join('')}
+          </ul>
+        </div>
+      `;
+    };
 
     const applyRender = () => {
       const term = searchEl.value.trim().toLowerCase();
@@ -42,9 +67,7 @@ export default class SavedView {
 
       if (term) {
         items = items.filter(
-          s =>
-            s.name.toLowerCase().includes(term) ||
-            s.description.toLowerCase().includes(term)
+          s => s.name.toLowerCase().includes(term) || s.description.toLowerCase().includes(term)
         );
       }
 
@@ -57,55 +80,23 @@ export default class SavedView {
       }
 
       listEl.innerHTML = items.length
-        ? items
-            .map(
-              s => `<li class="saved-item" data-id="${s.id}">
-                <article>
-                  <h3>${escapeHtml(s.name)}</h3>
-                  <p>${escapeHtml(s.description.slice(0, 120))}</p>
-                  <small>${new Date(s.createdAt).toLocaleString('id-ID')}</small>
-                  <div class="actions">
-                    <button type="button" class="btn-delete" aria-label="Hapus ${escapeHtml(
-                      s.name
-                    )}">Hapus</button>
-                    <a href="#/detail/${s.id}">Detail</a>
-                  </div>
-                </article>
-              </li>`
-            )
-            .join('')
+        ? items.map(s => `
+            <li class="saved-item" data-id="${s.id}">
+              <article>
+                <h3>${escapeHtml(s.name)}</h3>
+                <p>${escapeHtml((s.description || '').slice(0, 120))}</p>
+                <small>${new Date(s.createdAt).toLocaleString('id-ID')}</small>
+                <div class="actions">
+                  <button type="button" class="btn-delete" aria-label="Hapus ${escapeHtml(s.name)}">Hapus</button>
+                  <a href="#/detail/${s.id}">Detail</a>
+                </div>
+              </article>
+            </li>
+          `).join('')
         : '<li><em>Tidak ada cerita disimpan.</em></li>';
 
       outboxSection.innerHTML = renderOutbox(state.outbox);
     };
-
-    const renderOutbox = (items) => {
-      if (!items.length) return '';
-      return `
-        <div class="outbox-wrap">
-          <h2>Menunggu Sinkronisasi (${items.length})</h2>
-          <ul class="outbox-list">
-            ${items
-              .map(
-                o => `<li class="outbox-item" data-local-id="${o.localId}">
-                  <strong>${escapeHtml(o.description.slice(0, 40))}</strong>
-                  <small>Status: ${o.status}</small>
-                  ${o.errorMessage ? `<small class="error">${escapeHtml(o.errorMessage)}</small>` : ''}
-                </li>`
-              )
-              .join('')}
-          </ul>
-        </div>
-      `;
-    };
-
-    const escapeHtml = (s) =>
-      String(s || '')
-        .replaceAll('&', '&amp;')
-        .replaceAll('<', '&lt;')
-        .replaceAll('>', '&gt;')
-        .replaceAll('"', '&quot;')
-        .replaceAll("'", '&#39;');
 
     const reload = async () => {
       statusEl.textContent = 'Memuat...';
@@ -117,8 +108,7 @@ export default class SavedView {
     listEl.addEventListener('click', async (e) => {
       const btn = e.target.closest('.btn-delete');
       if (!btn) return;
-      const li = btn.closest('.saved-item');
-      const id = li?.getAttribute('data-id');
+      const id = btn.closest('.saved-item')?.getAttribute('data-id');
       if (!id) return;
       await presenter.delete(id);
       await reload();
@@ -126,6 +116,11 @@ export default class SavedView {
 
     searchEl.addEventListener('input', applyRender);
     sortEl.addEventListener('change', applyRender);
+
+    // Dengarkan event perubahan simpanan (optimistic update)
+    window.addEventListener('saved:changed', () => {
+      reload().catch(err => console.error('[SavedView] reload gagal setelah event', err));
+    });
 
     await reload();
   }
