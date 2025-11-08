@@ -1,33 +1,31 @@
-// Tambahkan route '/login' dan '/register' ke switch
+const STATIC_ROUTES = new Set([
+  '/',
+  '/about',
+  '/map',
+  '/add',
+  '/login',
+  '/register',
+]);
 
-const normalizePath = (path) => {
-  if (!path) return '/';
-  if (path === '') return '/';
-  return path.startsWith('/') ? path : `/${path}`;
-};
+function normalize(p) {
+  if (!p) return '/';
+  return p.startsWith('/') ? p : `/${p}`;
+}
 
 const Router = {
   parse() {
     const raw = window.location.hash.slice(1) || '/';
-    const [rawPath] = raw.split('?');
-    const path = normalizePath(rawPath);
+    const [pathPart] = raw.split('?');
+    const path = normalize(pathPart);
 
     if (path.startsWith('/detail/')) {
       const id = path.replace('/detail/', '');
       return { path: '/detail/:id', params: { id } };
     }
 
-    switch (path) {
-      case '/':
-      case '/about':
-      case '/map':
-      case '/add':
-      case '/login':
-      case '/register':
-        return { path, params: {} };
-      default:
-        return { path: '/', params: {} };
-    }
+    if (STATIC_ROUTES.has(path)) return { path, params: {} };
+
+    return { path: '/', params: {} };
   },
 };
 

@@ -1,8 +1,29 @@
-// CSS imports
 import '../styles/styles.css';
 import 'leaflet/dist/leaflet.css';
 
 import App from './pages/app';
+import { registerSW } from './pwa/register-sw';
+import { syncOutbox } from './data/sync';
+
+// Daftarkan SW secara RELATIF agar bekerja di lokal & Pages
+registerSW();
+
+navigator.serviceWorker?.addEventListener('message', (evt) => {
+  if (evt.data?.type === 'navigate' && evt.data.url) {
+    window.location.hash = evt.data.url;
+  }
+});
+
+function trySyncOutbox() {
+  if (!navigator.onLine) return;
+  setTimeout(() => { syncOutbox().catch(() => {}); }, 200);
+}
+
+if (navigator.onLine) trySyncOutbox();
+window.addEventListener('online', trySyncOutbox);
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible' && navigator.onLine) trySyncOutbox();
+});
 
 document.addEventListener('DOMContentLoaded', async () => {
   const app = new App({
@@ -10,9 +31,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     drawerButton: document.querySelector('#drawer-button'),
     navigationDrawer: document.querySelector('#navigation-drawer'),
   });
-  await app.renderPage();
 
-  window.addEventListener('hashchange', async () => {
-    await app.renderPage();
-  });
+  await app.renderPage();
+  window.addEventListener('hashchange', () => app.renderPage());
 });

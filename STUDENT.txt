@@ -1,22 +1,16 @@
-Instruksi STUDENT.txt (Wajib jika menggunakan API key/token):
+BASE_URL=https://story-api.dicoding.dev/v1
+DEPLOY_URL=https://rzptr30.github.io/8-Proyek-Pertama/
 
-1) Jika Story API membutuhkan autentikasi:
-   - Tuliskan Base URL dan Token yang Anda gunakan di bawah ini.
-   - Nilai pada file ini digunakan oleh reviewer sebagai referensi.
-   - Aplikasi TIDAK membaca file ini saat runtime. Aplikasi membaca konfigurasi dari localStorage (disetel melalui halaman "Tentang").
+FEATURES:
+- SPA + guarded routes + view transitions
+- Map + marker dari API (location=1)
+- Add story (online) + offline queue (Outbox) + auto-sync saat online
+- Auth (register/login/logout)
+- PWA installable + offline shell + dynamic caching (stories, images)
+- Push Notification (enable/disable, payload dinamis, action ke detail)
+- IndexedDB saved stories (CRUD + search + sort) + halaman #/saved
+- Aksesibilitas: label-for untuk input, fokus heading, aria drawer, aria-live status
+- Background Sync untuk POST /stories
 
-2) Contoh format pengisian:
-   BASE_URL=https://story-api.dicoding.dev/v1
-   TOKEN=Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJ1c2VyLUdxbFdaVWNkLTF3OUtDYS0iLCJpYXQiOjE3NjIwMDgxODZ9.I8uUQYz74mHssUV6RqvUZwPfH-9bR1uPo1LnDnOlGM8
-
-3) Cara menyetel konfigurasi di aplikasi:
-   - Jalankan aplikasi lalu buka menu "Tentang".
-   - Isi Base URL dan Token sesuai nilai di atas.
-   - Klik "Simpan Pengaturan".
-
-4) Peta:
-   - Aplikasi menggunakan Leaflet + OpenStreetMap, tidak memerlukan API key.
-   - Multiple tile layers diaktifkan melalui kontrol layer pada halaman "Peta".
-
-5) Catatan:
-   - Jangan commit token sensitif jika bersifat rahasia. Namun, untuk keperluan penilaian submission, isi TOKEN di atas agar reviewer dapat melakukan uji fungsional dengan mudah.
+TESTED_BROWSERS=Chrome 131 (Windows), Edge 131
+NOTES=Untuk uji notifikasi, pastikan mode Jangan Ganggu OS dimatikan dan izin notifikasi diizinkan pada origin GitHub Pages.

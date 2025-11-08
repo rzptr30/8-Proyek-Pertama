@@ -158,7 +158,17 @@ export default class AddView {
       try {
         this._setStatus(statusEl, 'Mengirim cerita...', false);
         const res = await presenter.submit({ description, photoFile: file, lat, lon });
-        this._setStatus(statusEl, 'Berhasil mengirim cerita!', false, true);
+
+        if (res?.offlineQueued) {
+          this._setStatus(
+            statusEl,
+            'Tidak ada koneksi. Cerita diantre dan akan disinkronkan otomatis saat online.',
+            false,
+            true
+          );
+        } else {
+          this._setStatus(statusEl, 'Berhasil mengirim cerita!', false, true);
+        }
 
         // Reset sederhana
         form.reset();
