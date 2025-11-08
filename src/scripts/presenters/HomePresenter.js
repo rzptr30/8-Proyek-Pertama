@@ -1,36 +1,41 @@
+/**
+ * HomePresenter
+ * - Mengambil daftar cerita dari Story API melalui apiClient.listStories()
+ * - Tidak melakukan render langsung; View akan memanggil presenter.load()
+ *   lalu menampilkan hasilnya.
+ *
+ * Kontrak minimal ke View:
+ *   const { stories, page, size, hasMore } = await presenter.load({ page: 1, size: 15 })
+ *
+ * Catatan:
+ * - API Dicoding biasa mengembalikan properti `listStory` sebagai array.
+ * - Field total/next tidak selalu tersedia; `hasMore` diestimasi dari panjang data.
+ */
+
+import apiClient from '../data/api-client';
+
 export default class HomePresenter {
   constructor(view) {
     this._view = view;
   }
 
-  async loadStories() {
-    try {
-      this._view.showLoading();
-      const apiClient = (await import('../data/api-client')).default;
-      const res = await apiClient.listStories({ page: 1, size: 15, location: 1 });
-      const raw = res?.listStory ?? res?.stories ?? [];
-      const items = Array.isArray(raw) ? raw.map(this._normalizeItem) : [];
-      this._view.showList(items);
-    } catch (err) {
-      // Berikan pesan lebih jelas jika error auth (401) atau 403
-      if (err && (err.status === 401 || err.status === 403)) {
-        this._view.showError('Missing authentication');
-      } else {
-        const msg = err?.message || 'Terjadi kesalahan jaringan.';
-        this._view.showError(msg);
-      }
-    }
-  }
+  /**
+   * Ambil daftar cerita dari API.
+   * @param {Object} opts
+   * @param {number} [opts.page=1] - halaman (1-based)
+   * @param {number} [opts.size=15] - jumlah per halaman
+   * @param {number} [opts.location=1] - sertakan koordinat (sesuai spesifikasi API)
+   * @returns {Promise<{stories: Array, page: number, size: number, hasMore: boolean}>}
+   */
+  async load({ page = 1, size = 15, location = 1 } = {}) {
+    const data = await apiClient.listStories({ page, size, location });
+    const stories = Array.isArray(data?.listStory) ? data.listStory
+                  : Array.isArray(data?.stories) ? data.stories
+                  : [];
 
-  _normalizeItem(it = {}) {
-    return {
-      id: it.id ?? it._id ?? '',
-      name: it.name ?? it.user?.name ?? 'Tanpa Nama',
-      description: it.description ?? it.desc ?? '',
-      photoUrl: it.photoUrl ?? it.photo ?? '',
-      createdAt: it.createdAt ?? it.created_at ?? '',
-      lat: it.lat ?? it.latitude ?? null,
-      lon: it.lon ?? it.longitude ?? null,
-    };
+    // Estimasi hasMore sederhana: jika jumlah item == size, kemungkinan masih ada halaman berikutnya
+    const hasMore = stories.length === size;
+
+    return { stories, page, size, hasMore };
   }
 }
